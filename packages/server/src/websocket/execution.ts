@@ -68,7 +68,11 @@ export async function handleCodeExecution(io: SocketServer, sessionId: string, d
       const filePath = path.join(dir, 'main.py');
       await fs.writeFile(filePath, content, 'utf-8');
 
-      await runPipedChild(io, sessionId, 'python3', ['-u', filePath], dir);
+      await runPipedChild(io, sessionId, 'docker', [
+        'run', '-i', '--rm', '--memory=256m', '--cpus=0.5', '--network=none',
+        '-v', `${dir}:/app`, '-w', '/app', 'devpilot-runner',
+        'python', '-u', 'main.py'
+      ], dir);
     } else if (language === 'java') {
       if (!tempDir) throw new Error('Temp dir not created');
       const dir = tempDir;
@@ -76,7 +80,7 @@ export async function handleCodeExecution(io: SocketServer, sessionId: string, d
       await fs.writeFile(filePath, content, 'utf-8');
 
       await new Promise<void>((resolve, reject) => {
-        exec(`javac Main.java`, { cwd: dir, timeout: 5000 }, (error: Error | null, _stdout: string, stderr: string) => {
+        exec(`docker run --rm --memory=256m --cpus=0.5 --network=none -v "${dir}:/app" -w /app devpilot-runner javac Main.java`, { cwd: dir, timeout: 10000 }, (error: Error | null, _stdout: string, stderr: string) => {
           if (error) {
             emitExec(io, sessionId, WS_EVENTS.EXECUTE_TOKEN, { token: stderr || error.message, isError: true });
             reject(new Error('Compilation Failed'));
@@ -86,7 +90,11 @@ export async function handleCodeExecution(io: SocketServer, sessionId: string, d
         });
       });
 
-      await runPipedChild(io, sessionId, 'java', ['Main'], dir);
+      await runPipedChild(io, sessionId, 'docker', [
+        'run', '-i', '--rm', '--memory=256m', '--cpus=0.5', '--network=none',
+        '-v', `${dir}:/app`, '-w', '/app', 'devpilot-runner',
+        'java', 'Main'
+      ], dir);
     } else {
       emitExec(io, sessionId, WS_EVENTS.EXECUTE_TOKEN, { token: `Unsupported language: ${language}`, isError: true });
       emitExec(io, sessionId, WS_EVENTS.EXECUTE_COMPLETE, {});

@@ -6,10 +6,20 @@ import { logger } from '../utils/logger.js';
 import { handleCodeExecution, sendProcessInput, cancelGraceKill, scheduleGraceKill } from './execution.js';
 import { getStableSessionId } from './session-id.js';
 import type { WSCompletionRequest, WSReviewRequest, WSChatMessage, AgentType, WSExecuteRequest } from '@devpilot/shared';
+import { config } from '../config/env.js';
 
 const activeAbortControllers = new Map<string, AbortController>();
 
 export function setupWebSocketHandlers(io: SocketServer) {
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (token === config.IDE_PASSCODE) {
+      next();
+    } else {
+      next(new Error('Authentication error'));
+    }
+  });
+
   io.on('connection', (socket: Socket) => {
     const sessionId = getStableSessionId(socket);
     socket.join(sessionId);

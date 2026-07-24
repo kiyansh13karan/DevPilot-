@@ -16,13 +16,21 @@ function getWebSocketSessionId(): string {
 }
 
 let socket: Socket | null = null;
+let cachedPasscode: string | null = localStorage.getItem('devpilot:passcode');
+
+if (!cachedPasscode) {
+  cachedPasscode = prompt("Enter IDE Passcode to connect:");
+  if (cachedPasscode) {
+    localStorage.setItem('devpilot:passcode', cachedPasscode);
+  }
+}
 
 export function getSocket(): Socket {
   if (!socket) {
     const sessionId = getWebSocketSessionId();
     socket = io(WS_URL, {
       query: { sessionId },
-      auth: { sessionId },
+      auth: { sessionId, token: cachedPasscode },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -41,6 +49,10 @@ export function getSocket(): Socket {
 
     socket.on('connect_error', (error) => {
       console.warn('WebSocket connection error:', error.message);
+      if (error.message === 'Authentication error') {
+        localStorage.removeItem('devpilot:passcode');
+        alert('Invalid passcode. Please reload the page and try again.');
+      }
     });
   }
 

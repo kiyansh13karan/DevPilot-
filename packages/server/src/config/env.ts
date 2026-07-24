@@ -5,12 +5,12 @@ interface EnvConfig {
   NODE_ENV: string;
   PORT: number;
   CLIENT_URL: string;
-  ASI1_API_KEY: string;
-  ASI1_BASE_URL: string;
-  ASI1_MODEL: string;
+  GEMINI_API_KEY: string;
+  GEMINI_MODEL: string;
   GITHUB_TOKEN: string;
   REDIS_URL: string;
   LOG_LEVEL: string;
+  IDE_PASSCODE: string;
 }
 
 function required(key: string): string {
@@ -27,10 +27,10 @@ export const config: EnvConfig = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.NODE_ENV === 'production' ? 7860 : parseInt(process.env.PORT || '3001', 10),
   CLIENT_URL: process.env.NODE_ENV === 'production' ? 'http://localhost:7860' : (process.env.CLIENT_URL || 'http://localhost:5173'),
-  ASI1_API_KEY: required('ASI1_API_KEY'),
-  ASI1_BASE_URL: process.env.ASI1_BASE_URL || 'https://api.asi1.ai/v1',
-  ASI1_MODEL: process.env.ASI1_MODEL || 'asi1-mini',
+  GEMINI_API_KEY: required('GEMINI_API_KEY'),
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-flash-latest',
   GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
   LOG_LEVEL: process.env.LOG_LEVEL || 'debug',
+  IDE_PASSCODE: process.env.IDE_PASSCODE || 'devpilot123',
 };

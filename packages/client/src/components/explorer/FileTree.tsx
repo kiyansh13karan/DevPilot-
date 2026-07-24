@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from 'lucide-react';
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, Plus } from 'lucide-react';
 import type { FileNode } from '@devpilot/shared';
 import { useEditorStore } from '@/stores/editorStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -92,9 +92,26 @@ function FileTreeItem({ node, depth }: FileTreeItemProps) {
 
 export default function FileTree() {
   const fileTree = useFileStore((s) => s.fileTree);
+  const createFile = useFileStore((s) => s.createFile);
+  const addFileToEditor = useEditorStore((s) => s.addFile);
+
+  const handleNewFile = () => {
+    const filename = prompt("Enter new file name (e.g. App.java):");
+    if (filename && filename.trim()) {
+      const path = filename.trim();
+      createFile(path, "");
+      addFileToEditor(path, "", getLanguageFromPath(path));
+    }
+  };
 
   return (
-    <div className="py-1">
+    <div className="py-1 flex flex-col">
+      <div className="flex items-center justify-between px-4 py-2 mb-1 text-xs text-muted-foreground uppercase font-semibold border-b border-border/40">
+        <span>Files</span>
+        <button onClick={handleNewFile} className="hover:text-foreground hover:bg-secondary rounded p-1" title="New File">
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
       {fileTree
         .sort((a, b) => {
           if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;

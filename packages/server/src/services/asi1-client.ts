@@ -1,27 +1,50 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { ASI1Message, ASI1Response, ASI1StreamResponse, ASI1_DEFAULTS } from '@devpilot/shared';
+import { GoogleGenAI } from '@google/genai';
+import { ASI1Message, ASI1Response, ASI1_DEFAULTS } from '@devpilot/shared';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { stripCodeFences } from '../utils/code-parser.js';
 import { countTokens } from '../utils/token-counter.js';
+import crypto from 'crypto';
+
+function mapMessages(messages: ASI1Message[]) {
+  const systemInstruction = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => m.content)
+    .join('\n');
+
+  const chatMessages: any[] = [];
+  const nonSystem = messages.filter((m) => m.role !== 'system');
+  
+  for (const m of nonSystem) {
+    const role = m.role === 'assistant' ? 'model' : 'user';
+    if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1].role === role) {
+       chatMessages[chatMessages.length - 1].parts[0].text += '\n\n' + m.content;
+    } else {
+       chatMessages.push({
+         role,
+         parts: [{ text: m.content }],
+       });
+    }
+  }
+
+  // Gemini needs at least one user message
+  if (chatMessages.length === 0) {
+    chatMessages.push({ role: 'user', parts: [{ text: 'Hello' }] });
+  }
+
+  return { systemInstruction: systemInstruction || undefined, contents: chatMessages };
+}
 
 export class ASI1Client {
-  private client: AxiosInstance;
+  private ai: GoogleGenAI;
   private model: string;
   private concurrentRequests = 0;
   private maxConcurrent = ASI1_DEFAULTS.MAX_CONCURRENT_REQUESTS;
   private waitQueue: Array<() => void> = [];
 
   constructor() {
-    this.model = config.ASI1_MODEL || ASI1_DEFAULTS.MODEL;
-    this.client = axios.create({
-      baseURL: config.ASI1_BASE_URL || ASI1_DEFAULTS.BASE_URL,
-      timeout: ASI1_DEFAULTS.TIMEOUT_MS,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.ASI1_API_KEY}`,
-      },
-    });
+    this.model = config.GEMINI_MODEL || 'gemini-flash-latest';
+    this.ai = new GoogleGenAI({ apiKey: config.GEMINI_API_KEY });
   }
 
   async chat(
@@ -30,24 +53,38 @@ export class ASI1Client {
   ): Promise<ASI1Response> {
     await this.waitForSlot();
     try {
-      const body = {
-        model: this.model,
-        messages,
-        temperature: options.temperature ?? ASI1_DEFAULTS.TEMPERATURE,
-        max_tokens: options.max_tokens ?? ASI1_DEFAULTS.MAX_TOKENS,
-        top_p: options.top_p ?? ASI1_DEFAULTS.TOP_P,
-        stream: false,
-      };
+      const { systemInstruction, contents } = mapMessages(messages);
+      logger.info('Gemini request', { messageCount: messages.length, tokenEstimate: countTokens(messages.map(m => m.content).join('')) });
 
-      logger.info('ASI-1 request', { messageCount: messages.length, tokenEstimate: countTokens(messages.map(m => m.content).join('')) });
-
-      const result = await this.retryWithBackoff(async () => {
-        const response = await this.client.post<ASI1Response>('/chat/completions', body);
-        return response.data;
+      const response = await this.retryWithBackoff(async () => {
+        return await this.ai.models.generateContent({
+          model: this.model,
+          contents,
+          config: {
+            systemInstruction,
+            temperature: options.temperature ?? ASI1_DEFAULTS.TEMPERATURE,
+            topP: options.top_p ?? ASI1_DEFAULTS.TOP_P,
+            maxOutputTokens: options.max_tokens ?? ASI1_DEFAULTS.MAX_TOKENS
+          }
+        });
       }, ASI1_DEFAULTS.MAX_RETRIES);
 
-      logger.info('ASI-1 response', { status: 'success', usage: result.usage });
-      return result;
+      logger.info('Gemini response', { status: 'success' });
+      
+      return {
+        id: crypto.randomUUID(),
+        choices: [
+          {
+            message: { role: 'assistant', content: response.text || '' },
+            finish_reason: 'stop'
+          }
+        ],
+        usage: {
+          prompt_tokens: response.usageMetadata?.promptTokenCount || 0,
+          completion_tokens: response.usageMetadata?.candidatesTokenCount || 0,
+          total_tokens: response.usageMetadata?.totalTokenCount || 0,
+        }
+      };
     } finally {
       this.releaseSlot();
     }
@@ -60,39 +97,23 @@ export class ASI1Client {
   ): AsyncGenerator<string> {
     await this.waitForSlot();
     try {
-      const body = {
-        model: this.model,
-        messages,
-        temperature: options.temperature ?? ASI1_DEFAULTS.TEMPERATURE,
-        max_tokens: options.max_tokens ?? ASI1_DEFAULTS.MAX_TOKENS,
-        top_p: ASI1_DEFAULTS.TOP_P,
-        stream: true,
-      };
+      const { systemInstruction, contents } = mapMessages(messages);
 
-      const response = await this.client.post('/chat/completions', body, {
-        responseType: 'stream',
-        signal,
+      const responseStream = await this.ai.models.generateContentStream({
+        model: this.model,
+        contents,
+        config: {
+          systemInstruction,
+          temperature: options.temperature ?? ASI1_DEFAULTS.TEMPERATURE,
+          topP: ASI1_DEFAULTS.TOP_P,
+          maxOutputTokens: options.max_tokens ?? ASI1_DEFAULTS.MAX_TOKENS
+        }
       });
 
-      let buffer = '';
-      for await (const chunk of response.data) {
-        buffer += chunk.toString();
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data: ')) continue;
-          const data = trimmed.slice(6);
-          if (data === '[DONE]') return;
-
-          try {
-            const parsed: ASI1StreamResponse = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) yield content;
-          } catch {
-            // Skip malformed chunks
-          }
+      for await (const chunk of responseStream) {
+        if (signal?.aborted) return;
+        if (chunk.text) {
+          yield chunk.text;
         }
       }
     } catch (err) {
@@ -167,25 +188,13 @@ export class ASI1Client {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await fn();
-      } catch (error) {
-        const axiosErr = error as AxiosError;
-        const status = axiosErr.response?.status;
-
-        if (status && status >= 400 && status < 500 && status !== 429) {
-          throw error;
-        }
-
+      } catch (error: any) {
         if (attempt === maxRetries) throw error;
 
         let delay = delays[attempt] || 4000;
-        if (status === 429) {
-          const retryAfter = axiosErr.response?.headers?.['retry-after'];
-          if (retryAfter) delay = parseInt(retryAfter, 10) * 1000;
-        }
-
-        logger.warn(`ASI-1 request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms`, {
-          status,
-          message: axiosErr.message,
+        // Simple backoff
+        logger.warn(`Gemini request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms`, {
+          message: error.message,
         });
 
         await new Promise((r) => setTimeout(r, delay));
