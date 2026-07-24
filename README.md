@@ -1,174 +1,128 @@
+<div align="center">
+  <img src="https://img.shields.io/badge/DevPilot-AI_IDE-6366f1?style=for-the-badge&logo=react&logoColor=white" alt="DevPilot Logo" />
+  <h1>🚀 DevPilot</h1>
+  <p><strong>An AI-Native, Browser-Based Full-Stack Development Environment</strong></p>
+
+  <p>
+    <a href="#features">Features</a> •
+    <a href="#tech-stack">Tech Stack</a> •
+    <a href="#getting-started">Getting Started</a> •
+    <a href="#architecture">Architecture</a>
+  </p>
+</div>
+
 ---
-title: DevPilot
-emoji: 🚀
-colorFrom: blue
-colorTo: purple
-sdk: docker
-pinned: false
-license: mit
----
 
-# DevPilot
+## 💡 What is DevPilot?
 
-DevPilot is an AI-native, browser-based IDE built around ASI-1. It combines code editing, AI chat, code completion, multi-agent review, terminal execution, and GitHub workflows in a single application.
+**DevPilot** is a next-generation browser-based IDE built around the powerful ASI-1 API. It aims to eliminate context switching by combining world-class code editing, AI-assisted development, live previews, and terminal execution into a single, unified workspace.
 
-## Executive Summary
+Whether you're scaffolding a new React app or debugging a backend server, DevPilot's integrated AI agents are there to review your code, suggest completions, and write documentation on the fly.
 
-| Item | Details |
-| --- | --- |
-| Product Type | Browser-based AI IDE |
-| Primary Use Case | Build, review, and ship code faster from one workspace |
-| AI Backbone | ASI-1 API (chat, completion, analysis, orchestration) |
-| Deployment Model | Monorepo with Docker and Docker Compose support |
-| Key Integrations | GitHub, Redis, WebSocket streaming |
+## ✨ Key Features
 
-## Key Capabilities
+- **🤖 Integrated AI Assistant:** Chat with ASI-1 directly inside your editor. Generate boilerplate, refactor functions, or ask architectural questions without leaving your code.
+- **⚡ Smart Code Completion:** Context-aware inline suggestions powered by AI to increase your coding velocity.
+- **🕵️ Multi-Agent Review System:** Dedicated AI agents for Security, Performance, Style, and Documentation review your codebase before you ship.
+- **💻 Pro-Grade Editor Engine:** Built on Monaco Editor (the same engine powering VS Code) featuring syntax highlighting for 20+ languages.
+- **🖥️ Integrated Terminal:** Fully functional browser terminal backed by WebSockets for direct Node/Python/Java execution.
+- **🌐 Live Preview:** Real-time HTML/CSS/JS rendering loop to instantly visualize frontend changes.
+- **🐙 GitHub Integration:** Seamlessly import repositories, generate fixes, and create Pull Requests straight from the IDE.
 
-| Capability | Description | Business Value |
-| --- | --- | --- |
-| AI Chat and Streaming | Real-time ASI-1 assistant integrated in the IDE | Faster iteration and lower context switching |
-| Code Completion | Context-aware inline suggestions | Higher coding velocity |
-| Multi-Agent Review | Security, performance, style, and documentation agents | Better code quality before PR |
-| Monaco-Based Editor | Multi-file editing with VS Code-grade engine | Familiar professional developer experience |
-| Integrated Terminal | Browser terminal over WebSocket | In-app execution and validation |
-| Live Preview | Real-time HTML/CSS/JS preview | Rapid UI feedback loop |
-| GitHub Workflow | Repository import and patch/PR flow | Shorter path from idea to merge |
+## 🛠️ Tech Stack
 
-## Architecture Overview
-
-```text
-Client (React + Monaco + Zustand)
-  -> REST API (Express routes)
-  -> WebSocket channel (chat tokens, terminal, execution events)
-
-Server (Express + Agent Orchestrator)
-  -> ASI-1 service client
-  -> GitHub service
-  -> Redis (cache/pub-sub/coordination)
-```
-
-Detailed architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
-
-## Repository Structure
-
-| Path | Purpose |
-| --- | --- |
-| packages/client | React application, IDE shell, editor and UI components |
-| packages/server | Express API, WebSocket handlers, AI services, agent orchestration |
-| packages/shared | Shared types, constants, and cross-package utilities |
-| Dockerfile | Production image build configuration |
-| docker-compose.yml | Local multi-service orchestration |
-
-## Technology Stack
+DevPilot is engineered as a modern, type-safe Monorepo:
 
 | Layer | Technologies |
-| --- | --- |
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Monaco, Zustand |
-| Backend | Node.js, Express, Socket.io |
-| AI | ASI-1 API with streaming and retry support |
-| Infrastructure | Docker, Docker Compose, Redis |
-| Repository | npm workspaces monorepo |
+| :--- | :--- |
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Monaco Editor, Zustand |
+| **Backend** | Node.js, Express.js, Socket.io |
+| **AI Integration** | ASI-1 API (Streaming & Orchestration) |
+| **Infrastructure** | Docker, Docker Compose, Redis |
 
-## Local Development
+## 🚀 Getting Started
+
+Follow these steps to get your local development environment up and running.
 
 ### Prerequisites
 
-| Requirement | Minimum Version |
-| --- | --- |
-| Node.js | 18+ |
-| npm | 9+ |
-| Docker | Recommended |
+- **Node.js** (v18 or higher)
+- **npm** (v9 or higher)
+- **Docker** (Highly recommended for Redis & safe execution)
 
-### Setup
+### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/DevPilot.git
-cd DevPilot
+git clone https://github.com/kiyansh13karan/DevPilot-.git
+cd DevPilot-
 npm install
+```
+
+### 2. Environment Setup
+
+Create a `.env` file in the root directory (you can copy `.env.example`):
+
+```bash
 cp .env.example .env
 ```
 
-### Environment Variables
+Open `.env` and add your essential API keys:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| NODE_ENV | No | Runtime mode (development/production) |
-| PORT | No | Server port |
-| CLIENT_URL | No | Allowed client origin |
-| ASI1_API_KEY | Yes | ASI-1 authentication key |
-| ASI1_BASE_URL | No | ASI-1 API base URL |
-| ASI1_MODEL | No | Default ASI-1 model |
-| GITHUB_TOKEN | Optional | GitHub integration and PR automation |
-| REDIS_URL | No | Redis connection string |
-| LOG_LEVEL | No | Server logging verbosity |
+```ini
+# Required for AI features
+ASI1_API_KEY=your_asi1_api_key_here
 
-Start Redis and run development servers:
+# Optional: For importing/pushing repos
+GITHUB_TOKEN=your_github_token_here
+```
+
+### 3. Start the Services
+
+Start a local Redis instance (required for WebSocket pub/sub):
 
 ```bash
 docker run -d --name devpilot-redis -p 6379:6379 redis
+```
+
+Boot up both the frontend and backend servers concurrently:
+
+```bash
 npm run dev:all
 ```
 
-| Service | URL |
-| --- | --- |
-| Client | http://localhost:5173 |
-| Server | http://localhost:3001 |
+Your IDE is now live at: **[http://localhost:5173](http://localhost:5173)** 🎉
 
-## Scripts
+## 🏗️ Architecture Overview
+
+DevPilot uses an **npm workspaces** monorepo structure:
+
+- **`packages/client/`**: The React SPA frontend. Handles UI, editor state, and WebSocket connections.
+- **`packages/server/`**: The Node.js Express backend. Acts as a secure proxy to the ASI-1 AI, manages WebSocket terminal sessions, and runs the Multi-Agent orchestrator.
+- **`packages/shared/`**: Contains shared TypeScript interfaces, constants, and utility functions to ensure strict end-to-end type safety.
+
+## 📜 Scripts
 
 | Command | Description |
-| --- | --- |
-| npm run dev | Start client development server |
-| npm run dev:server | Start server development process |
-| npm run dev:all | Run client and server concurrently |
-| npm run build | Build shared, server, and client packages |
-| npm run typecheck | Run TypeScript project-reference checks |
+| :--- | :--- |
+| `npm run dev:all` | Run both client and server development processes concurrently |
+| `npm run build` | Build all workspace packages (`shared`, `server`, `client`) |
+| `npm run typecheck` | Run TypeScript compilation checks across the monorepo |
 
-## Deployment
+## 🤝 Contributing
 
-| Option | Command |
-| --- | --- |
-| Docker Compose | docker-compose up --build |
-| Single Image | docker build -t devpilot-ide . |
-| Single Image Run | docker run --env-file .env -p 7860:7860 devpilot-ide |
+Contributions make the open-source community an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-In containerized mode, the backend serves static frontend assets and API/WebSocket traffic from a single port.
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## API and Realtime Surface
+## 📄 License
 
-| Surface | Capability |
-| --- | --- |
-| REST | Chat, completion, review, docs and integration endpoints |
-| SSE | Token streaming for chat responses |
-| WebSocket | Terminal IO, execution events, chat token streaming |
+Distributed under the MIT License. See `LICENSE` for more information.
 
-Package-level docs:
-
-- [packages/server/README.md](packages/server/README.md)
-- [packages/client/README.md](packages/client/README.md)
-- [packages/shared/README.md](packages/shared/README.md)
-
-## Hackathon Readiness
-
-| Requirement Area | Current Status |
-| --- | --- |
-| ASI-1 Integration Depth | Implemented across chat, completion, and multi-agent analysis |
-| Codebase Documentation | Root and package-level documentation available |
-| Setup Reproducibility | .env template and Docker-based startup provided |
-| Demonstration Path | Import -> Generate -> Review -> Validate -> PR workflow supported |
-
-## Recommended Demo Flow
-
-1. Import a GitHub repository.
-2. Use ASI-1 chat to generate or refactor feature code.
-3. Run multi-agent review and inspect findings.
-4. Apply fixes and verify using preview/terminal.
-5. Create a PR with summarized changes.
-
-## Contributing
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Commit changes.
-4. Push branch.
-5. Open a pull request.
+---
+<div align="center">
+  <i>Built with ❤️ by Karan Nayal</i>
+</div>
