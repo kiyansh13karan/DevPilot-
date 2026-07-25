@@ -59,12 +59,22 @@ const config: Config = {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.5' },
         },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-15px)' },
+        },
+        'glow': {
+          '0%, 100%': { opacity: '0.8', filter: 'blur(20px)' },
+          '50%': { opacity: '1', filter: 'blur(30px)' },
+        }
       },
       animation: {
         marquee: 'marquee 20s linear infinite',
         'fade-in': 'fade-in 0.5s ease-out',
         'slide-in-right': 'slide-in-right 0.3s ease-out',
         pulse: 'pulse 2s ease-in-out infinite',
+        float: 'float 6s ease-in-out infinite',
+        glow: 'glow 3s ease-in-out infinite',
       },
     },
   },

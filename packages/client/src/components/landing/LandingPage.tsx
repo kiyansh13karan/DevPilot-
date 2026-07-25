@@ -1,5 +1,5 @@
 import HeroSection from './HeroSection';
-import FeaturesSection from './FeaturesSection';
+import StatsAndFeaturesSection from './StatsAndFeaturesSection';
 import ChessSection from './ChessSection';
 import ReverseChessSection from './ReverseChessSection';
 import NumbersSection from './NumbersSection';
@@ -7,9 +7,9 @@ import CTAFooterWrapper from './CTAFooterWrapper';
 
 export default function LandingPage() {
   return (
-    <main className="bg-background min-h-screen overflow-x-hidden">
+    <main className="bg-[#050510] min-h-screen overflow-x-hidden">
       <HeroSection />
-      <FeaturesSection />
+      <StatsAndFeaturesSection />
       <ChessSection />
       <ReverseChessSection />
       <NumbersSection />
